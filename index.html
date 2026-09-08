@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>روشتات طوارئ الأطفال - ابن سينا</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <style>
+        :root { --primary: #007bff; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333; --border: #ddd; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 40px; }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h2 { color: var(--primary); margin: 0 0 5px 0; font-size: 24px; }
+        .header p { margin: 0; color: #666; font-size: 14px; }
+        .container { max-width: 600px; margin: auto; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
+        .input-group { display: flex; gap: 10px; }
+        input[type="number"], select { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background-color: #fafafa; }
+        .symptoms { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .symptom-label { display: flex; align-items: center; background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-size: 16px; cursor: pointer; }
+        .symptom-label input { margin-left: 15px; width: 20px; height: 20px; accent-color: var(--primary); }
+        button { width: 100%; padding: 16px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #result { margin-top: 25px; padding: 20px; background: #f8fbff; border-right: 5px solid var(--primary); border-radius: 8px; white-space: pre-wrap; font-size: 16px; line-height: 1.8; display: none; }
+        .warning { color: #d9534f; font-weight: bold; display: block; margin-bottom: 5px; }
+        .note { color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 14px; border: 1px solid #ffeeba; display: inline-block;}
+        .footer { text-align: center; margin-top: 30px; font-size: 14px; color: #888; font-weight: bold; border-top: 1px solid #eee; padding-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>روشتات طوارئ الأطفال</h2>
+        <p>مستشفى ابن سينا - الطوارئ</p>
+    </div>
+    
+    <div class="form-group">
+        <label>العمر (Age):</label>
+        <div class="input-group">
+            <input type="number" id="ageVal" placeholder="أدخل الرقم" min="1" step="1" inputmode="numeric">
+            <select id="ageUnit">
+                <option value="days">Days (أيام)</option>
+                <option value="months">Months (شهور)</option>
+                <option value="years">Years (سنوات)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>الوزن (Weight in kg):</label>
+        <input type="number" id="weight" placeholder="الوزن بالكيلوجرام" min="1" step="0.1" inputmode="decimal">
+    </div>
+
+    <div class="form-group">
+        <label>الأعراض والأدوية المباشرة:</label>
+        <div class="symptoms">
+            <label class="symptom-label"><input type="checkbox" value="fever"> Fever (حمى)</label>
+            <label class="symptom-label"><input type="checkbox" value="diarrhea"> Diarrhea (إسهال)</label>
+            <label class="symptom-label"><input type="checkbox" value="vomiting"> Vomiting (استفراغ)</label>
+            <label class="symptom-label"><input type="checkbox" value="cough"> Cough (سعال)</label>
+            <label class="symptom-label"><input type="checkbox" value="abdominal_pain"> Abdominal Pain (ألم بطن)</label>
+            <label class="symptom-label"><input type="checkbox" value="augmentin"> Augmentin (أوجمنتين)</label>
+            <label class="symptom-label"><input type="checkbox" value="azithromycin"> Azithromycin (أزيثروميسين)</label>
+        </div>
+    </div>
+
+    <button onclick="generatePrescription()">إنشاء الروشتة المجمعة</button>
+
+    <div id="result"></div>
+    
+    <div class="footer">صنع بواسطة م/محمد باحقينه</div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+    function roundDose(num) { return Math.round(num * 100) / 100; }
+    function roundOneDec(num) { return Math.round(num * 10) / 10; }
+
+    function generatePrescription() {
+        const ageVal = parseFloat(document.getElementById('ageVal').value);
+        const ageUnit = document.getElementById('ageUnit').value;
+        const weight = parseFloat(document.getElementById('weight').value);
+        const resultDiv = document.getElementById('result');
+        
+        if (!ageVal || !weight) { alert("الرجاء إدخال العمر والوزن بشكل صحيح."); return; }
+
+        let ageInMonths = 0, ageInYears = 0;
+        if (ageUnit === 'days') { ageInMonths = ageVal / 30; ageInYears = ageVal / 365; } 
+        else if (ageUnit === 'months') { ageInMonths = ageVal; ageInYears = ageVal / 12; } 
+        else if (ageUnit === 'years') { ageInMonths = ageVal * 12; ageInYears = ageVal; }
+
+        const checkboxes = document.querySelectorAll('.symptoms input:checked');
+        if (checkboxes.length === 0) { alert("الرجاء تحديد خيار واحد على الأقل."); return; }
+
+        let rx = "<b style='font-size:20px; color:#007bff; border-bottom:2px solid #007bff; padding-bottom:5px; display:inline-block; margin-bottom:15px;'>Prescription</b>\n\n";
+        let hasMeds = false;
+
+        checkboxes.forEach(cb => {
+            const sym = cb.value;
+
+            if (sym === 'augmentin') {
+                const totalDailyMg = weight * 30; 
+                let augText = "";
+                let augNote = `<div class="note">💡 تنبيه: يجب سؤال/اختبار الحساسية قبل إعطاء المضاد.</div>`;
+
+                if (ageInYears >= 1 && ageInYears < 3) {
+                    augText = `Augmentin Syrup 156mg/5ml\n${roundDose((totalDailyMg / (156 / 5)) / 3)}ml X TDS X 5day`;
+                } else if (ageInYears >= 3 && ageInYears < 5) {
+                    augText = `Augmentin Syrup 228mg/5ml\n${roundDose((totalDailyMg / (228 / 5)) / 2)}ml X BD X 5day`;
+                } else if (ageInYears >= 5 && ageInYears < 10) {
+                    augText = `Augmentin Syrup 312mg/5ml\n${roundDose((totalDailyMg / (312 / 5)) / 3)}ml X TDS X 5day`;
+                } else if (ageInYears >= 10 && ageInYears <= 12) {
+                    augText = `Augmentin Syrup 457mg/5ml\n${roundDose((totalDailyMg / (457 / 5)) / 2)}ml X BD X 5day`;
+                } else if (ageInYears > 12) {
+                    augText = `Augmentin Tablet 625mg\n1 tab X BD X 5day`;
+                } else {
+                    augText = `<span class="warning">⚠️ تحذير: العمر أقل من سنة، يرجى مراجعة الجرعة سريرياً.</span>`;
+                }
+
+                rx += `<b>Antibiotic (Augmentin)</b>\n${augText}\n${augNote}\n\n`;
+                hasMeds = true;
+            }
+
+            if (sym === 'azithromycin') {
+                const azithroMl = roundOneDec(weight * 10 / 40);
+                rx += `<b>Antibiotic (Azithromycin)</b>\nAzithromycin syrup 200mg/5ml\n${azithroMl}ml-OD-5day\nيعطى قبل الاكل بساعه\n\n`;
+                hasMeds = true;
+            }
+
+            if (sym === 'fever') {
+                const doseMg = weight * 15;
+                const dropsMl = roundDose(doseMg / 100);
+                const syrup120Ml = roundDose((doseMg / 120) * 5);
+                const syrup250Ml = roundDose((doseMg / 250) * 5);
+
+                if (ageInYears < 1) { rx += `Adol Drops 100mg/ml ${dropsMl}ml X 6hr X 3day\nOR\nAdol Syrup 120mg/5ml ${syrup120Ml}ml X 6hr X 3day\n\n`; } 
+                else if (ageInYears >= 1 && ageInYears < 2.5) { rx += `Adol Syrup 120mg/5ml ${syrup120Ml}ml X 6hr X 3day\nOR\nAdol Drops 100mg/ml ${dropsMl}ml X 6hr X 3day\n\n`; } 
+                else { rx += `Adol Syrup 250mg/5ml ${syrup250Ml}ml X 6hr X 3day\nOR\nAdol Syrup 120mg/5ml ${syrup120Ml}ml X 6hr X 3day\n\n`; }
+                hasMeds = true;
+            }
+
+            if (sym === 'diarrhea') {
+                rx += `ORS\nكيس يذاب في دبة ماء ويعطى بعد كل إسهال\n\nZinc 20mg tab ${ageInYears < 4 ? "½ tab" : "1 tab"} X OD X 5day\n${ageInYears < 4 ? "تذاب نصف حبة في ربع كوب ماء" : "تذاب حبة كاملة في ربع كوب ماء"}\n\nOptional Antibiotic\nCefixime Syrup 100mg/5ml ${roundOneDec(weight * 0.4)}ml X OD X 5day\n\n`;
+                hasMeds = true;
+            }
+
+            if (sym === 'vomiting') {
+                if (ageInMonths < 6) { 
+                    rx += `<span class="warning">⚠️ Medical Warning (Vomiting):</span>العمر أقل من 6 أشهر. لا يتم إعطاء Onan.\n\n`; 
+                } else { 
+                    rx += `Onan Syrup 4mg/5ml ${roundDose(weight * 0.1875)}ml X TDS X 3day\nيعطى قبل الاكل بساعه\n\n`; 
+                }
+                hasMeds = true;
+            }
+
+            if (sym === 'cough') {
+                if (ageInYears < 2) {
+                    let d = "1.5 mL"; if(ageInMonths<=2) d="5 drops"; else if(ageInMonths<=4) d="6 drops"; else if(ageInMonths<=6) d="7 drops"; else if(ageInMonths<=8) d="8 drops"; else if(ageInMonths<=10) d="9 drops"; else if(ageInMonths<12) d="10 drops";
+                    rx += `Mini Guava Syrup ${d} X TDS X 3day\n\n`;
+                } else {
+                    let e = 2; if(ageInYears>=3&&ageInYears<=5) e=2.5; else if(ageInYears==6) e=4; else if(ageInYears==7) e=4.5; else if(ageInYears>=8&&ageInYears<=9) e=5; else if(ageInYears==10) e=7; else if(ageInYears>=11) e=8;
+                    rx += `Elkof Syrup ${e}mL X TDS X 3day\n\n`;
+                }
+                hasMeds = true;
+            }
+
+            if (sym === 'abdominal_pain') {
+                rx += `Buscopan Syrup ${roundOneDec((weight * 0.5) / 3)}ml X TDS X 3day\n\n`;
+                hasMeds = true;
+            }
+        });
+
+        if (hasMeds) {
+            resultDiv.innerHTML = rx.replace(/\n/g, '<br>');
+            resultDiv.style.display = 'block';
+            setTimeout(() => { resultDiv.scrollIntoView({ behavior: 'smooth' }); }, 100);
+        }
+    }
+</script>
+</body>
+</html>
