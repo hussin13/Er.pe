@@ -1,0 +1,8 @@
+{
+  "name": "روشتات طوارئ الأطفال - ابن سينا",
+  "short_name": "طوارئ الأطفال",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#007bff"
+}
